@@ -4,7 +4,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
-# from langchain.vectorstores import FAISS
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
@@ -12,38 +11,31 @@ from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 
 load_dotenv()
-os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+os.getenv("GOOGLE_API_KEY")#importing the google api key
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))#using the apikey
 
-
-
-
-
-
-def get_pdf_text(pdf_docs):
+def get_pdf_text(pdf_docs):#PyPDF to get the text of the pdf
     text=""
     for pdf in pdf_docs:
         pdf_reader= PdfReader(pdf)
         for page in pdf_reader.pages:
             text+= page.extract_text()
-    return  text
+    return text
 
 
-
-def get_text_chunks(text):
+def get_text_chunks(text):#using the text spiltter to split the dataset into the chunks
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
     chunks = text_splitter.split_text(text)
     return chunks
 
 
-def get_vector_store(text_chunks):
+def get_vector_store(text_chunks):#using the text chunks and make the embeddings on them with the help of google gen ai embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    # vector_store = FAISS.load_local("faiss_index", embeddings,allow_dangerous_deserialization=True)
     vector_store.save_local("faiss_index")
 
 
-def get_conversational_chain():
+def get_conversational_chain():#using the gemini pro for the conversation
 
     prompt_template = """
     Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
@@ -55,7 +47,7 @@ def get_conversational_chain():
     """
 
     model = ChatGoogleGenerativeAI(model="gemini-pro",
-                             temperature=0.3)
+                             temperature=0.3)#temperature is the hyperparameter of tranformer to get the different outputs
 
     prompt = PromptTemplate(template = prompt_template, input_variables = ["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -64,7 +56,7 @@ def get_conversational_chain():
 
 
 
-def user_input(user_question):
+def user_input(user_question):#make the embeddings of the user input, and with the help of similarity search tries to find the answer of it
     embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
     
     new_db = FAISS.load_local("faiss_index", embeddings,allow_dangerous_deserialization=True)
